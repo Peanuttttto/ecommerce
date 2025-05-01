@@ -24,7 +24,7 @@ class _UserListState extends State<UserList> {
 
   Future<void> fetchUsers() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost/ecommerce/api/show_users.php'));
+      final response = await http.get(Uri.parse('http://localhost:8081/project/show_users.php'));
       if (response.statusCode == 200) {
         setState(() {
           users = json.decode(response.body);
@@ -169,7 +169,7 @@ class _UserDetailState extends State<UserDetail> {
     }
 
     try {
-      final url = Uri.parse('http://localhost/ecommerce/api/update_user.php');
+      final url = Uri.parse('http://localhost:8081/project/update_user.php');
       var request = http.MultipartRequest('POST', url);
 
       request.fields['id'] = widget.user['id'].toString();
@@ -237,7 +237,7 @@ class _UserDetailState extends State<UserDetail> {
   Future<void> _deleteUser() async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost/ecommerce/api/delete_user.php'),
+        Uri.parse('http://localhost:8081/project/delete_user.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'id': widget.user['id'].toString()}),
       );

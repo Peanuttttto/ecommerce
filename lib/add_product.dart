@@ -1,152 +1,194 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ecommerce/add_product.dart';
+import 'package:ecommerce/show_products.dart';
+import 'package:ecommerce/show_users.dart';
 
-class AddProduct extends StatefulWidget {
-  const AddProduct({super.key});
+// Import home_page.dart with specific classes to avoid circular dependency
+import 'package:ecommerce/home_page.dart' show HomePage, AdminHomeScreen;
 
+class AddEditProductPage extends StatefulWidget {
   @override
-  _AddProductState createState() => _AddProductState();
+  _AddEditProductPageState createState() => _AddEditProductPageState();
 }
 
-class _AddProductState extends State<AddProduct> {
+class _AddEditProductPageState extends State<AddEditProductPage> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _imageController = TextEditingController();
+  final _imageUrlController = TextEditingController();
+  bool _isLoading = false;
+  bool _isEditing = false;
+  int? _productId;
 
-  Future<void> _submitProduct() async {
-    if (_nameController.text.isEmpty ||
-        _descriptionController.text.isEmpty ||
-        _priceController.text.isEmpty ||
-        _imageController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill all fields')));
-      return;
-    }
-
-    try {
-      double? price = double.tryParse(_priceController.text);
-      if (price == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid price format')));
-        return;
-      }
-
-      final url = 'http://localhost/ecommerce/api/add_product.php';
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'name': _nameController.text,
-          'description': _descriptionController.text,
-          'price': price,
-          'image': _imageController.text,
-        }),
-      );
-
-      final responseData = json.decode(response.body);
-
-      if (responseData['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Product added successfully')));
-        _nameController.clear();
-        _descriptionController.clear();
-        _priceController.clear();
-        _imageController.clear();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed: ${responseData['message']}')));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')));
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final product = ModalRoute.of(context)?.settings.arguments as Product?;
+    if (product != null && !_isEditing) {
+      _nameController.text = product.name;
+      _descriptionController.text = product.description;
+      _priceController.text = product.price.toString();
+      _imageUrlController.text = product.image;
+      _isEditing = true;
     }
   }
 
-  void _cancelForm() {
-    _nameController.clear();
-    _descriptionController.clear();
-    _priceController.clear();
-    _imageController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Form cleared')));
+  Future<void> _saveProduct() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      final url = _isEditing
+          ? 'http://localhost:8081/project/update_product.php'
+          : 'http://localhost:8081/project/add_product.php';
+          
+      final body = {
+        'name': _nameController.text,
+        'description': _descriptionController.text,
+        'price': _priceController.text,
+        'image_url': _imageUrlController.text,
+      };
+      
+      if (_isEditing) {
+        body['id'] = _productId.toString();
+      }
+      
+      final response = await http.post(Uri.parse(url), body: body);
+      
+      if (response.statusCode == 200) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isEditing
+                ? 'Product updated successfully'
+                : 'Product added successfully'),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isEditing
+                ? 'Failed to update product'
+                : 'Failed to add product'),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error connecting to server: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'Product Name',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Product' : 'Add Product'),
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
                 ),
-                filled: true,
-                fillColor: Colors.orange[50], // เปลี่ยนเป็นสีส้มอ่อน
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a product name';
+                  }
+                  return null;
+                },
               ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
                 ),
-                filled: true,
-                fillColor: Colors.orange[50], // เปลี่ยนเป็นสีส้มอ่อน
+                maxLines: 3,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a product description';
+                  }
+                  return null;
+                },
               ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Price',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _priceController,
+                decoration: InputDecoration(
+                  labelText: 'Price',
+                  border: OutlineInputBorder(),
+                  prefixText: '฿',
                 ),
-                filled: true,
-                fillColor: Colors.orange[50], // เปลี่ยนเป็นสีส้มอ่อน
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a price';
+                  }
+                  try {
+                    double.parse(value);
+                  } catch (e) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
               ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _imageController,
-              decoration: InputDecoration(
-                labelText: 'Image URL',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _imageUrlController,
+                decoration: InputDecoration(
+                  labelText: 'Image URL',
+                  border: OutlineInputBorder(),
+                  hintText: 'http://localhost/ecommerce/URL',
                 ),
-                filled: true,
-                fillColor: Colors.orange[50], // เปลี่ยนเป็นสีส้มอ่อน
               ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(
-                  onPressed: _submitProduct,
-                  child: const Text('Add Product'),
-                ),
-                ElevatedButton(
-                  onPressed: _cancelForm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[400], // คงสีแดงเพื่อความชัดเจน
+              SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Cancel'),
                   ),
-                  child: const Text('Cancel'),
-                ),
-              ],
-            ),
-          ],
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _saveProduct,
+                    child: _isLoading
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(_isEditing ? 'Save Changes' : 'Add Product'),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
