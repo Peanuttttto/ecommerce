@@ -25,7 +25,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> fetchProducts() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:8081/project/show_data.php'));
+      final response = await http.get(Uri.parse('http://localhost:8081/ecommerce/ecommerce/project/show_data.php'));
       if (response.statusCode == 200) {
         setState(() {
           products = json.decode(response.body);

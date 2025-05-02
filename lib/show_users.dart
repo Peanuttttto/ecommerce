@@ -24,7 +24,7 @@ class _UserListState extends State<UserList> {
 
   Future<void> fetchUsers() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:8081/project/show_users.php'));
+      final response = await http.get(Uri.parse('http://localhost:8081/ecommerce/ecommerce/project/show_users.php'));
       if (response.statusCode == 200) {
         setState(() {
           users = json.decode(response.body);
@@ -55,21 +55,8 @@ class _UserListState extends State<UserList> {
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(10),
-                  leading: user['profile_image'] != null && user['profile_image'].isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            user['profile_image'],
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.person, size: 60),
-                          ),
-                        )
-                      : const Icon(Icons.person, size: 60),
                   title: Text(
-                    '${user['first_name']} ${user['last_name']}',
+                    '${user['name']}',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -108,8 +95,7 @@ class UserDetail extends StatefulWidget {
 
 class _UserDetailState extends State<UserDetail> {
   bool isEditing = false;
-  late TextEditingController firstNameController;
-  late TextEditingController lastNameController;
+  late TextEditingController NameController;
   late TextEditingController addressController;
   late TextEditingController phoneController;
   late TextEditingController usernameController;
@@ -120,8 +106,7 @@ class _UserDetailState extends State<UserDetail> {
   @override
   void initState() {
     super.initState();
-    firstNameController = TextEditingController(text: widget.user['first_name'] ?? '');
-    lastNameController = TextEditingController(text: widget.user['last_name'] ?? '');
+    NameController = TextEditingController(text: widget.user['name'] ?? '');
     addressController = TextEditingController(text: widget.user['address'] ?? '');
     phoneController = TextEditingController(text: widget.user['phone'] ?? '');
     usernameController = TextEditingController(text: widget.user['username'] ?? '');
@@ -130,8 +115,7 @@ class _UserDetailState extends State<UserDetail> {
 
   @override
   void dispose() {
-    firstNameController.dispose();
-    lastNameController.dispose();
+    NameController.dispose();
     addressController.dispose();
     phoneController.dispose();
     usernameController.dispose();
@@ -152,8 +136,7 @@ class _UserDetailState extends State<UserDetail> {
   }
 
   Future<void> _updateUser() async {
-    if (firstNameController.text.isEmpty ||
-        lastNameController.text.isEmpty ||
+    if (NameController.text.isEmpty ||
         addressController.text.isEmpty ||
         phoneController.text.isEmpty ||
         usernameController.text.isEmpty) {
@@ -169,30 +152,16 @@ class _UserDetailState extends State<UserDetail> {
     }
 
     try {
-      final url = Uri.parse('http://localhost:8081/project/update_user.php');
+      final url = Uri.parse('http://localhost:8081/ecommerce/ecommerce/project/update_user.php');
       var request = http.MultipartRequest('POST', url);
 
       request.fields['id'] = widget.user['id'].toString();
-      request.fields['first_name'] = firstNameController.text;
-      request.fields['last_name'] = lastNameController.text;
+      request.fields['name'] = NameController.text;
       request.fields['address'] = addressController.text;
       request.fields['phone'] = phoneController.text;
       request.fields['username'] = usernameController.text;
       request.fields['password'] = passwordController.text;
 
-      if (_selectedImageBytes != null) {
-        String extension = path.extension(_selectedImagePath ?? '').toLowerCase();
-        if (extension.isEmpty) {
-          extension = '.jpg';
-        } else if (extension == '.jpeg') {
-          extension = '.jpg';
-        }
-        request.files.add(http.MultipartFile.fromBytes(
-          'profile_image',
-          _selectedImageBytes!,
-          filename: 'user_${widget.user['id']}_${DateTime.now().millisecondsSinceEpoch}$extension',
-        ));
-      }
 
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
@@ -204,21 +173,10 @@ class _UserDetailState extends State<UserDetail> {
             const SnackBar(content: Text('User updated successfully')));
         setState(() {
           isEditing = false;
-          widget.user['first_name'] = firstNameController.text;
-          widget.user['last_name'] = lastNameController.text;
+          widget.user['name'] = NameController.text;
           widget.user['address'] = addressController.text;
           widget.user['phone'] = phoneController.text;
           widget.user['username'] = usernameController.text;
-          if (_selectedImageBytes != null) {
-            String extension = path.extension(_selectedImagePath ?? '').toLowerCase();
-            if (extension.isEmpty) {
-              extension = '.jpg';
-            } else if (extension == '.jpeg') {
-              extension = '.jpg';
-            }
-            widget.user['profile_image'] =
-                'http://localhost/ecommerce/uploads/user_${widget.user['id']}_${DateTime.now().millisecondsSinceEpoch}$extension';
-          }
           passwordController.clear();
           _selectedImageBytes = null;
           _selectedImagePath = null;
@@ -237,7 +195,7 @@ class _UserDetailState extends State<UserDetail> {
   Future<void> _deleteUser() async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8081/project/delete_user.php'),
+        Uri.parse('http://localhost:8081/ecommerce/ecommerce/project/delete_user.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'id': widget.user['id'].toString()}),
       );
@@ -261,7 +219,7 @@ class _UserDetailState extends State<UserDetail> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.user['first_name']} ${widget.user['last_name']}'),
+        title: Text('${widget.user['name']}'),
         automaticallyImplyLeading: false, // ลบปุ่มย้อนกลับ
       ),
       body: SingleChildScrollView(
@@ -271,17 +229,9 @@ class _UserDetailState extends State<UserDetail> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
-                    controller: firstNameController,
+                    controller: NameController,
                     decoration: const InputDecoration(
-                      labelText: 'First Name',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: lastNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Last Name',
+                      labelText: 'Name',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -320,29 +270,7 @@ class _UserDetailState extends State<UserDetail> {
                     ),
                     obscureText: true,
                   ),
-                  const SizedBox(height: 20),
-                  _selectedImageBytes != null
-                      ? Image.memory(
-                          _selectedImageBytes!,
-                          height: 100,
-                          fit: BoxFit.cover,
-                        )
-                      : widget.user['profile_image'] != null &&
-                              widget.user['profile_image'].isNotEmpty
-                          ? Image.network(
-                              widget.user['profile_image'],
-                              height: 100,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.broken_image, size: 100),
-                            )
-                          : const Icon(Icons.person, size: 100),
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed: _pickImage,
-                    icon: const Icon(Icons.image),
-                    label: const Text('Change Profile Image'),
-                  ),
+                  
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -355,8 +283,7 @@ class _UserDetailState extends State<UserDetail> {
                         onPressed: () {
                           setState(() {
                             isEditing = false;
-                            firstNameController.text = widget.user['first_name'] ?? '';
-                            lastNameController.text = widget.user['last_name'] ?? '';
+                            NameController.text = widget.user['name'] ?? '';
                             addressController.text = widget.user['address'] ?? '';
                             phoneController.text = widget.user['phone'] ?? '';
                             usernameController.text = widget.user['username'] ?? '';
@@ -378,7 +305,7 @@ class _UserDetailState extends State<UserDetail> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${widget.user['first_name']} ${widget.user['last_name']}',
+                    '${widget.user['name']}',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -409,18 +336,7 @@ class _UserDetailState extends State<UserDetail> {
                       color: Colors.grey[800],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  if (widget.user['profile_image'] != null &&
-                      widget.user['profile_image'].isNotEmpty)
-                    Center(
-                      child: Image.network(
-                        widget.user['profile_image'],
-                        height: 200,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.broken_image, size: 100),
-                      ),
-                    ),
+                  
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

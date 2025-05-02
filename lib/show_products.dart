@@ -60,7 +60,7 @@ class _ProductListPageState extends State<ProductListPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8081/project/show_data.php'),
+        Uri.parse('http://localhost:8081/ecommerce/ecommerce/project/show_data.php'),
       );
 
       if (response.statusCode == 200) {
@@ -106,7 +106,7 @@ class _ProductListPageState extends State<ProductListPage> {
     if (confirmed ?? false) {
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:8081/project/delete_product.php'),
+          Uri.parse('http://localhost:8081/ecommerce/ecommerce/project/delete_product.php'),
           body: {'id': id.toString()},
         );
 
@@ -261,7 +261,7 @@ class ProductDetailPage extends StatelessWidget {
                     if (confirmed ?? false) {
                       try {
                         final response = await http.post(
-                          Uri.parse('http://localhost:8081/project/delete_product.php'),
+                          Uri.parse('http://localhost:8081/ecommerce/ecommerce/project/delete_product.php'),
                           body: {'id': product.id.toString()},
                         );
 

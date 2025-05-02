@@ -31,7 +31,7 @@ class _SignupPageState extends State<SignupPage> {
     
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8081/project/signup.php'),
+        Uri.parse('http://localhost:8081/ecommerce/ecommerce/project/signup.php'),
         body: {
           'name': _nameController.text,
           'address': _addressController.text,

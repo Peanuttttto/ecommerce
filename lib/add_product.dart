@@ -44,8 +44,8 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     
     try {
       final url = _isEditing
-          ? 'http://localhost:8081/project/update_product.php'
-          : 'http://localhost:8081/project/add_product.php';
+          ? 'http://localhost:8081/ecommerce/ecommerce/project/update_product.php'
+          : 'http://localhost:8081/ecommerce/ecommerce/project/add_product.php';
           
       final body = {
         'name': _nameController.text,

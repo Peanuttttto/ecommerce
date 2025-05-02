@@ -27,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
     
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8081/project/login.php'),
+        Uri.parse('http://localhost:8081/ecommerce/ecommerce/project/login.php'),
         body: {
           'Username': _userController.text,
           'Password': _passwordController.text,
